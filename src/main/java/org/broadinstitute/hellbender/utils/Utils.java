@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.utils;
 
+import com.google.api.client.repackaged.com.google.common.base.Strings;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -259,6 +260,22 @@ public class Utils {
 	    l.add(t);
 	}
         return l;
+    }
+
+    /**
+     * Create a new string thats a n duplicate copies of s
+     * @param s the string to duplicate
+     * @param nCopies how many copies?
+     * @return a string
+     */
+    public static String dupString(final String s, int nCopies) {
+        return Strings.repeat(s, nCopies);
+    }
+
+    public static String dupString(char c, int nCopies) {
+        char[] chars = new char[nCopies];
+        Arrays.fill(chars, c);
+        return new String(chars);
     }
 
     public static byte[] dupBytes(byte b, int nCopies) {

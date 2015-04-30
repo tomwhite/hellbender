@@ -39,6 +39,10 @@ public final class XReadLines implements Iterator<String>, Iterable<String>, Aut
         this(filename, true);
     }
 
+    public XReadLines(final InputStream inputStream) throws IOException {
+        this(new InputStreamReader(inputStream), true, null);
+    }
+
     /**
      * Opens the given file for reading lines and optionally trim whitespaces.
      * The file may be a text file or a gzipped text file (the distinction is made by the file extension).

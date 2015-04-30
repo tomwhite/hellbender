@@ -5,7 +5,9 @@ import htsjdk.variant.variantcontext.Allele;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.broadinstitute.hellbender.utils.MathUtils;
+import org.broadinstitute.hellbender.utils.genotyper.LikelihoodMatrix;
 import org.broadinstitute.hellbender.utils.haplotype.Haplotype;
+import org.broadinstitute.hellbender.utils.read.ReadUtils;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -180,7 +182,7 @@ public abstract class PairHMM {
      *
      * @return never {@code null}.
      */
-    public void computeLikelihoods(final ReadLikelihoods.Matrix<Haplotype> likelihoods,
+    public void computeLikelihoods(final LikelihoodMatrix<Haplotype> likelihoods,
                                    final List<SAMRecord> processedReads,
                                    final Map<SAMRecord,byte[]> gcp) {
         if (processedReads.isEmpty())
@@ -202,8 +204,8 @@ public abstract class PairHMM {
         for(final SAMRecord read : processedReads){
             final byte[] readBases = read.getReadBases();
             final byte[] readQuals = read.getBaseQualities();
-            final byte[] readInsQuals = read.getBaseInsertionQualities();
-            final byte[] readDelQuals = read.getBaseDeletionQualities();
+            final byte[] readInsQuals = ReadUtils.getBaseInsertionQualities(read);
+            final byte[] readDelQuals = ReadUtils.getBaseDeletionQualities(read);
             final byte[] overallGCP = gcp.get(read);
 
             // peak at the next haplotype in the list (necessary to get nextHaplotypeBases, which is required for caching in the array implementation)
