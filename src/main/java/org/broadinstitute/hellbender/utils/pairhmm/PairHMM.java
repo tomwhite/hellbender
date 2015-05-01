@@ -1,5 +1,6 @@
 package org.broadinstitute.hellbender.utils.pairhmm;
 
+import com.google.api.client.repackaged.com.google.common.annotations.VisibleForTesting;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.variant.variantcontext.Allele;
 import org.apache.logging.log4j.LogManager;
@@ -15,7 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Util class for performing the pair HMM for local alignment. Figure 4.3 in Durbin 1998 book.
+ * Class for performing the pair HMM for local alignment. Figure 4.3 in Durbin 1998 book.
  */
 public abstract class PairHMM {
     protected final static Logger logger = LogManager.getLogger(PairHMM.class);
@@ -114,11 +115,11 @@ public abstract class PairHMM {
     }
 
     /**
-     * Called at the end of PairHMM for a region - mostly used by the JNI implementations
+     * Called at the end of PairHMM for a region - mostly used by the JNI implementations.
+     * This default implementation does nothing.
      */
-    public void finalizeRegion()
-    {
-        ;
+    public void finalizeRegion() {
+        //do nothing
     }
 
     /**
@@ -133,16 +134,6 @@ public abstract class PairHMM {
         initialize(readMaxLength, haplotypeMaxLength);
     }
 
-    private int findMaxReadLength(final SAMRecord ... reads) {
-        int max = 0;
-        for (final SAMRecord read : reads) {
-            final int readLength = read.getReadLength();
-            if (max < readLength)
-                max = readLength;
-        }
-        return max;
-    }
-
     private int findMaxAlleleLength(final List<? extends Allele> alleles) {
         int max = 0;
         for (final Allele allele : alleles) {
@@ -153,20 +144,24 @@ public abstract class PairHMM {
         return max;
     }
 
-    protected int findMaxReadLength(final List<SAMRecord> reads) {
+    private int findMaxReadLength(final List<SAMRecord> reads) {
         int listMaxReadLength = 0;
         for(SAMRecord read : reads){
             final int readLength = read.getReadLength();
-            if( readLength > listMaxReadLength ) { listMaxReadLength = readLength; }
+            if( readLength > listMaxReadLength ) {
+                listMaxReadLength = readLength;
+            }
         }
         return listMaxReadLength;
     }
 
-    protected int findMaxHaplotypeLength(final Collection<Haplotype> haplotypes) {
+    private int findMaxHaplotypeLength(final Collection<Haplotype> haplotypes) {
         int listMaxHaplotypeLength = 0;
         for( final Haplotype h : haplotypes) {
             final int haplotypeLength = h.getBases().length;
-            if( haplotypeLength > listMaxHaplotypeLength ) { listMaxHaplotypeLength = haplotypeLength; }
+            if( haplotypeLength > listMaxHaplotypeLength ) {
+                listMaxHaplotypeLength = haplotypeLength;
+            }
         }
         return listMaxHaplotypeLength;
     }
@@ -185,15 +180,18 @@ public abstract class PairHMM {
     public void computeLikelihoods(final LikelihoodMatrix<Haplotype> likelihoods,
                                    final List<SAMRecord> processedReads,
                                    final Map<SAMRecord,byte[]> gcp) {
-        if (processedReads.isEmpty())
+        if (processedReads.isEmpty()) {
             return;
-        if(doProfiling)
+        }
+        if(doProfiling) {
             startTime = System.nanoTime();
+        }
         // (re)initialize the pairHMM only if necessary
         final int readMaxLength = findMaxReadLength(processedReads);
         final int haplotypeMaxLength = findMaxAlleleLength(likelihoods.alleles());
-        if (!initialized || readMaxLength > maxReadLength || haplotypeMaxLength > maxHaplotypeLength)
+        if (!initialized || readMaxLength > maxReadLength || haplotypeMaxLength > maxHaplotypeLength) {
             initialize(readMaxLength, haplotypeMaxLength);
+        }
 
         final int readCount = processedReads.size();
         final List<Haplotype> alleles = likelihoods.alleles();
@@ -253,7 +251,8 @@ public abstract class PairHMM {
      * @throws IllegalArgumentException readBases, readQuals, insertionGOP, deletionGOP and overallGCP are not the same size
      * @return the log10 probability of read coming from the haplotype under the provided error model
      */
-    protected final double computeReadLikelihoodGivenHaplotypeLog10( final byte[] haplotypeBases,
+    @VisibleForTesting
+    double computeReadLikelihoodGivenHaplotypeLog10( final byte[] haplotypeBases,
                                                                   final byte[] readBases,
                                                                   final byte[] readQuals,
                                                                   final byte[] insertionGOP,
@@ -283,10 +282,11 @@ public abstract class PairHMM {
 
         double result = subComputeReadLikelihoodGivenHaplotypeLog10(haplotypeBases, readBases, readQuals, insertionGOP, deletionGOP, overallGCP, hapStartIndex, recacheReadValues, nextHapStartIndex);
 
-        if ( result > 0.0)
+        if ( result > 0.0) {
             throw new IllegalStateException("PairHMM Log Probability cannot be greater than 0: " + String.format("haplotype: %s, read: %s, result: %f, PairHMM: %s", new String(haplotypeBases), new String(readBases), result, this.getClass().getSimpleName()));
-        else if (!MathUtils.goodLog10Probability(result))
+        } else if (!MathUtils.goodLog10Probability(result)) {
             throw new IllegalStateException("Invalid Log Probability: " + result);
+        }
 
         // Warning: Careful if using the PairHMM in parallel! (this update has to be taken care of).
         // Warning: This assumes no downstream modification of the haplotype bases (saves us from copying the array). It is okay for the haplotype caller and the Unified Genotyper.
@@ -326,9 +326,9 @@ public abstract class PairHMM {
         if ( haplotype1 == null || haplotype1.length == 0 ) throw new IllegalArgumentException("Haplotype1 is bad " + Arrays.toString(haplotype1));
         if ( haplotype2 == null || haplotype2.length == 0 ) throw new IllegalArgumentException("Haplotype2 is bad " + Arrays.toString(haplotype2));
 
-        for( int iii = 0; iii < haplotype1.length && iii < haplotype2.length; iii++ ) {
-            if( haplotype1[iii] != haplotype2[iii] ) {
-                return iii;
+        for( int i = 0; i < haplotype1.length && i < haplotype2.length; i++ ) {
+            if( haplotype1[i] != haplotype2[i] ) {
+                return i;
             }
         }
 
@@ -336,25 +336,14 @@ public abstract class PairHMM {
     }
 
     /**
-     * Use number of threads to set doProfiling flag - doProfiling iff numThreads == 1
-     * This function should be called only during initialization phase - single thread phase of HC
-     */
-    public static void setNumberOfThreads(final int numThreads)
-    {
-        doProfiling = (numThreads == 1);
-        if(numThreads > 1)
-            logger.info("Performance profiling for PairHMM is disabled because HaplotypeCaller is being run with multiple threads (-nct>1) option\nProfiling is enabled only when running in single thread mode\n");
-    }
-
-    /**
      * Return the results of the computeLikelihoods function
      */
     public double[] getLikelihoodArray() { return mLikelihoodArray; }
+
     /**
      * Called at the end of the program to close files, print profiling information etc 
      */
-    public void close()
-    {
+    public void close() {
         if(doProfiling)
             logger.info("Total compute time in PairHMM computeLikelihoods() : "+(pairHMMComputeTime*1e-9));
     }

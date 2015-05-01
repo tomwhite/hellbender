@@ -11,7 +11,7 @@ import static org.broadinstitute.hellbender.utils.pairhmm.PairHMMModel.*;
 /**
  * Util class for performing the pair HMM for local alignment. Figure 4.3 in Durbin 1998 book.
  */
-public class Log10PairHMM extends N2MemoryPairHMM {
+public final class Log10PairHMM extends N2MemoryPairHMM {
     /**
      * Should we use exact log10 calculation (true), or an approximation (false)?
      */
@@ -19,7 +19,7 @@ public class Log10PairHMM extends N2MemoryPairHMM {
 
 
     // we divide e by 3 because the observed base could have come from any of the non-observed alleles
-    protected final static double log10_3 = log10(3.0);
+    private final static double log10_3 = log10(3.0);
 
     /**
      * Create an uninitialized PairHMM
@@ -45,10 +45,10 @@ public class Log10PairHMM extends N2MemoryPairHMM {
     public void initialize(final int readMaxLength, final int haplotypeMaxLength ) {
         super.initialize(readMaxLength, haplotypeMaxLength);
 
-        for( int iii=0; iii < paddedMaxReadLength; iii++ ) {
-            Arrays.fill(matchMatrix[iii], Double.NEGATIVE_INFINITY);
-            Arrays.fill(insertionMatrix[iii], Double.NEGATIVE_INFINITY);
-            Arrays.fill(deletionMatrix[iii], Double.NEGATIVE_INFINITY);
+        for( int i=0; i < paddedMaxReadLength; i++ ) {
+            Arrays.fill(matchMatrix[i], Double.NEGATIVE_INFINITY);
+            Arrays.fill(insertionMatrix[i], Double.NEGATIVE_INFINITY);
+            Arrays.fill(deletionMatrix[i], Double.NEGATIVE_INFINITY);
         }
     }
 
@@ -67,8 +67,9 @@ public class Log10PairHMM extends N2MemoryPairHMM {
                                                                final int nextHapStartIndex) {
 
 
-        if ( ! constantsAreInitialized || recacheReadValues )
+        if ( ! constantsAreInitialized || recacheReadValues ) {
             initializeProbabilities(insertionGOP, deletionGOP, overallGCP);
+        }
         initializePriors(haplotypeBases, readBases, readQuals, hapStartIndex);
         if (previousHaplotypeBases == null || previousHaplotypeBases.length != haplotypeBases.length) {
             // set the initial value (free deletions in the beginning) for the first row in the deletion matrix
@@ -88,18 +89,19 @@ public class Log10PairHMM extends N2MemoryPairHMM {
         return finalLikelihoodCalculation();
     }
 
-    protected void initializeMatrixValues(final byte[] haplotypeBases) {
+    private void initializeMatrixValues(final byte[] haplotypeBases) {
         final double initialValue = log10(1.0 / haplotypeBases.length);
         for( int j = 0; j < paddedHaplotypeLength; j++ ) {
             deletionMatrix[0][j] = initialValue;
         }
     }
 
-    protected double finalLikelihoodCalculation() {
+    private double finalLikelihoodCalculation() {
         final int endI = paddedReadLength - 1;
         double finalSumProbabilities = myLog10SumLog10(new double[]{matchMatrix[endI][1], insertionMatrix[endI][1]});
-        for (int j = 2; j < paddedHaplotypeLength; j++)
+        for (int j = 2; j < paddedHaplotypeLength; j++) {
             finalSumProbabilities = myLog10SumLog10(new double[]{finalSumProbabilities, matchMatrix[endI][j], insertionMatrix[endI][j]});
+        }
         return finalSumProbabilities;
     }
 
@@ -116,7 +118,7 @@ public class Log10PairHMM extends N2MemoryPairHMM {
     public void initializePriors(final byte[] haplotypeBases, final byte[] readBases, final byte[] readQuals, final int startIndex) {
 
         // initialize the pBaseReadLog10 matrix for all combinations of read x haplotype bases
-        // Abusing the fact that java initializes arrays with 0.0, so no need to fill in rows and columns below 2.
+        // Java initializes arrays with 0.0, so no need to fill in rows and columns below 2.
 
         for (int i = 0; i < readBases.length; i++) {
             final byte x = readBases[i];
@@ -156,7 +158,7 @@ public class Log10PairHMM extends N2MemoryPairHMM {
      * @param values an array of log10 probabilities that need to be summed
      * @return the log10 of the sum of the probabilities
      */
-    protected double myLog10SumLog10(final double[] values) {
+    private double myLog10SumLog10(final double[] values) {
         return doExactLog10 ? MathUtils.log10sumLog10(values) : MathUtils.approximateLog10SumLog10(values);
     }
 
@@ -171,7 +173,7 @@ public class Log10PairHMM extends N2MemoryPairHMM {
      * @param prior            the likelihood editing distance matrix for the read x haplotype
      * @param transition        an array with the six transition relevant to this location
      */
-    protected void updateCell( final int indI, final int indJ, final double prior, final double[] transition) {
+    private void updateCell( final int indI, final int indJ, final double prior, final double[] transition) {
 
         matchMatrix[indI][indJ] = prior +
                 myLog10SumLog10(new double[]{matchMatrix[indI - 1][indJ - 1] + transition[matchToMatch],

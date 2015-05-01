@@ -6,13 +6,12 @@ import org.broadinstitute.hellbender.utils.QualityUtils;
 /**
  * Helper class that implement calculations required to implement the PairHMM Finite State Automation (FSA) model.
  */
-public class PairHMMModel {
+public final class PairHMMModel {
 
     /**
      * Prevents instantiation of this class
      */
     private PairHMMModel() {
-
     }
 
     /**
@@ -53,12 +52,12 @@ public class PairHMMModel {
     /**
      * Convenient ln10 constant.
      */
-    private static double LN10 = Math.log(10);
+    private static final double LN10 = Math.log(10);
 
     /**
      * Convenient (ln10)^-1 constant.
      */
-    private static double INV_LN10 = 1.0 / LN10;
+    private static final double INV_LN10 = 1.0 / LN10;
 
     /**
      * Holds pre-calculated the matchToMath probability values in linear scale.
@@ -68,7 +67,7 @@ public class PairHMMModel {
      * <p/>
      * (0,0), (0,1), (1,1), (0,2), (1,2), (2,2), (0,3) ... ({@link QualityUtils#MAX_QUAL},{@link QualityUtils#MAX_QUAL})
      */
-    private static double[] matchToMatchProb = new double[((QualityUtils.MAX_QUAL + 1) * (QualityUtils.MAX_QUAL + 2)) >> 1];
+    private static final double[] matchToMatchProb = new double[((QualityUtils.MAX_QUAL + 1) * (QualityUtils.MAX_QUAL + 2)) >> 1];
 
     /**
      * Holds pre-calculated the matchToMath probability values in log10 scale.
@@ -78,7 +77,7 @@ public class PairHMMModel {
      * <p/>
      * (0,0), (0,1), (1,1), (0,2), (1,2), (2,2), (0,3) ... ({@link QualityUtils#MAX_QUAL},{@link QualityUtils#MAX_QUAL})
      */
-    private static double[] matchToMatchLog10 = new double[((QualityUtils.MAX_QUAL + 1) * (QualityUtils.MAX_QUAL + 2)) >> 1];
+    private static final double[] matchToMatchLog10 = new double[((QualityUtils.MAX_QUAL + 1) * (QualityUtils.MAX_QUAL + 2)) >> 1];
 
     /**
      * Initialize matchToMatch cache tables {@link #matchToMatch} and {@link #matchToMatchLog10}
@@ -160,11 +159,11 @@ public class PairHMMModel {
         final int readLength = insQuals.length;
         if (delQuals.length != readLength) throw new IllegalArgumentException("deletion quality array length does not match insert quality array length: " + readLength + " != " + delQuals.length);
         if (gcps.length != readLength) throw new IllegalArgumentException("deletion quality array length does not match insert quality array length: " + readLength + " != " + gcps.length);
-
         if (dest.length < readLength + 1) throw new IllegalArgumentException("destination length is not enough for the read length: " + dest.length + " < " + readLength + " + 1");
 
-        for (int i = 0; i < readLength; i++)
+        for (int i = 0; i < readLength; i++) {
             qualToTransProbs(dest[i + 1], insQuals[i], delQuals[i], gcps[i]);
+        }
     }
 
     /**
@@ -261,8 +260,9 @@ public class PairHMMModel {
         if (gcps.length != readLength) throw new IllegalArgumentException("deletion quality array length does not match insert quality array length: " + readLength + " != " + gcps.length);
         if (dest.length < readLength + 1) throw new IllegalArgumentException("destination length is not enough for the read length: " + dest.length + " < " + readLength + " + 1");
 
-        for (int i = 0; i < readLength; i++)
-            qualToTransProbsLog10(dest[i+1],insQuals[i],delQuals[i],gcps[i]);
+        for (int i = 0; i < readLength; i++) {
+            qualToTransProbsLog10(dest[i + 1], insQuals[i], delQuals[i], gcps[i]);
+        }
     }
 
     /**

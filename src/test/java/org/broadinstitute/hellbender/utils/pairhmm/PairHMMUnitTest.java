@@ -294,7 +294,7 @@ public class PairHMMUnitTest extends BaseTest {
     @Test(enabled = !DEBUG, dataProvider = "HMMProvider")
     void testAllMatchingRead(final PairHMM hmm, final int readSize, final int refSize) {
         final byte[] readBases =  Utils.dupBytes((byte)'A', readSize);
-        final byte[] refBases = Utils.dupBytes((byte)'A', refSize);
+        final byte[] refBases = Utils.dupBytes((byte) 'A', refSize);
         final byte baseQual = 20;
         final byte insQual = 100;
         final byte delQual = 100;
@@ -465,7 +465,7 @@ public class PairHMMUnitTest extends BaseTest {
         final byte[] baseQuals = Utils.dupBytes((byte)30, readBases.length);
         final byte[] insQuals = Utils.dupBytes((byte)45, readBases.length);
         final byte[] delQuals = Utils.dupBytes((byte)40, readBases.length);
-        final byte[] gcp = Utils.dupBytes((byte)10, readBases.length);
+        final byte[] gcp = Utils.dupBytes((byte) 10, readBases.length);
         double d = hmm.computeReadLikelihoodGivenHaplotypeLog10(hap.getBytes(), readBases, baseQuals, insQuals, delQuals, gcp, recache, nextHapBases);
         Assert.assertTrue(MathUtils.goodLog10Probability(d), "Likelihoods = " + d + " was bad for read " + read + " and ref " + hap + " with hapStart " + hapStart);
         return d;
@@ -542,5 +542,12 @@ public class PairHMMUnitTest extends BaseTest {
         hmm.initialize(2, 3);
         double d = hmm.computeReadLikelihoodGivenHaplotypeLog10( refBases, readBases,
                 baseQuals, baseQuals, baseQuals, baseQuals, true, null);
+    }
+
+    @Test
+    public void dumpMatrices(){
+        //doesn't test anything other than not-blowing up
+        getHMMs().forEach(hmm -> hmm.initialize(3, 3));
+        getHMMs().forEach(hmm -> hmm.dumpMatrices());
     }
 }

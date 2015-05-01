@@ -13,6 +13,7 @@ abstract class N2MemoryPairHMM extends PairHMM {
     // only used for debugging purposes
     protected boolean doNotUseTristateCorrection = false;
 
+    @Override
     public void doNotUseTristateCorrection() {
         doNotUseTristateCorrection = true;
     }
