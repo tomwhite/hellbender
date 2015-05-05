@@ -97,7 +97,7 @@ public final class CollectInsertSizeMetrics extends SinglePassSamProgram {
     protected void finish() {
         multiCollector.finish();
 
-        final MetricsFile<InsertSizeMetrics, Integer> file = getMetricsFile();
+        final MetricsFile<InsertSizeMetrics, Integer> file = CommandLineProgram.getMetricsFile();
         multiCollector.addAllLevelsToFile(file);
 
         if(file.getNumHistograms() == 0) {

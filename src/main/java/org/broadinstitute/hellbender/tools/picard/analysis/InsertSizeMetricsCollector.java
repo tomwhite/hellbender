@@ -13,7 +13,7 @@ import org.broadinstitute.hellbender.metrics.PerUnitMetricCollector;
 import java.util.*;
 
 /**
- * Collects InserSizeMetrics on the specified accumulationLevels using
+ * Collects InsertSizeMetrics on the specified accumulationLevels using
  */
 public final class InsertSizeMetricsCollector extends MultiLevelCollector<InsertSizeMetrics, Integer, InsertSizeCollectorArgs> {
     // When generating the Histogram, discard any data categories (out of FR, TANDEM, RF) that have fewer than this

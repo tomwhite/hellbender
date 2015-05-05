@@ -2,7 +2,9 @@ package org.broadinstitute.hellbender.metrics;
 
 import htsjdk.samtools.metrics.MetricBase;
 
-public abstract class MultiLevelMetrics extends MetricBase {
+import java.io.Serializable;
+
+public abstract class MultiLevelMetrics extends MetricBase implements Serializable{
      /** The sample to which these metrics apply.  If null, it means they apply
      * to all reads in the file. */
     public String SAMPLE;

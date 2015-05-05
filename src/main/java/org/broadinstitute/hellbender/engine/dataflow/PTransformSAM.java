@@ -4,7 +4,6 @@ import com.google.api.services.genomics.model.Read;
 import com.google.cloud.dataflow.sdk.transforms.PTransform;
 import com.google.cloud.dataflow.sdk.values.PCollection;
 import htsjdk.samtools.SAMFileHeader;
-import org.broadinstitute.hellbender.engine.GATKTool;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 
 /**
