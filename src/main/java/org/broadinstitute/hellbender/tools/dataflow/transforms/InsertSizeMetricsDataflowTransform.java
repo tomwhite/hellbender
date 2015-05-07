@@ -3,11 +3,13 @@ package org.broadinstitute.hellbender.tools.dataflow.transforms;
 
 import com.google.api.services.genomics.model.Read;
 import com.google.cloud.dataflow.sdk.transforms.Combine;
+import com.google.cloud.dataflow.sdk.transforms.DoFn;
 import com.google.cloud.dataflow.sdk.transforms.Filter;
 import com.google.cloud.dataflow.sdk.values.PCollection;
 import com.google.common.collect.*;
 import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMRecord;
+import htsjdk.samtools.metrics.MetricBase;
 import htsjdk.samtools.metrics.MetricsFile;
 import htsjdk.samtools.reference.ReferenceSequence;
 import htsjdk.samtools.util.Log;
@@ -55,40 +57,50 @@ public class InsertSizeMetricsDataflowTransform extends PTransformSAM<InsertSize
     private static final Log log = Log.getInstance(InsertSizeMetricsDataflowTransform.class);
 
     @Override
-    public PCollection<InsertSizeMetricsCollector> apply(PCollection<Read> input) {
+    public PCollection<MetricsFile<InsertSizeMetrics,Integer>>> apply(PCollection<Read> input) {
         input.apply(Filter.by(new SAMSerializableFunction<>(getHeaderString(), isMappedPair)))
-                .apply(Combine.globally(new Combine.AccumulatingCombineFn<>() {
-                    @Override
-                    public Object createAccumulator() {
-                        return new HistogramAccumulator();
-                    }
-                }));
+            .apply(Combine.globally(new Combine.AccumulatingCombineFn<Integer, DataflowHistogram<Integer>, DataflowHistogram<Integer>>() {
+                @Override
+                public DataflowHistogram<Integer> createAccumulator() {
+                    return new DataflowHistogram<Integer>();
+                }
+            }))
+            .apply(new DoFn<DataflowHistogram<Integer>, MetricsFile<InsertSizeMetrics, Integer>>() {
+                @Override
+                public void processElement(ProcessContext c) throws Exception {
+                    DataflowHistogram<Integer> histo = c.element();
+                    MetricsFile file = new MetricsFileDataflow<InsertSizeMetrics, Integer>();
+                    c.output(file);
+                }
+            });
 
     }
 
 
-
-    public class HistogramAccumulator implements Combine.AccumulatingCombineFn.Accumulator<Integer, HistogramAccumulator , SortedMultiset<Integer>>{
-        public final Multiset<Integer> histogram = HashMultiset.create();
-
-
-        @Override
-        public void addInput(Integer input) {
-            histogram.add(input);
-        }
-
-        @Override
-        public void mergeAccumulator(HistogramAccumulator other) {
-            histogram.addAll(other.histogram);
-        }
-
-        @Override
-        public SortedMultiset<Integer> extractOutput() {
-            SortedMultiset<Integer> output = TreeMultiset.create();
-            output.addAll(histogram);
-            return output;
-        }
+    public static class MetricsFileDataflow<BEAN extends MetricBase & Serializable, HKEY extends Comparable> extends MetricsFile<BEAN, HKEY> {
     }
+//
+//    public class HistogramAccumulator implements Combine.AccumulatingCombineFn.Accumulator<Integer, HistogramAccumulator , SortedMultiset<Integer>>{
+//        public final Multiset<Integer> histogram = HashMultiset.create();
+//
+//
+//        @Override
+//        public void addInput(Integer input) {
+//            histogram.add(input);
+//        }
+//
+//        @Override
+//        public void mergeAccumulator(HistogramAccumulator other) {
+//            histogram.addAll(other.histogram);
+//        }
+//
+//        @Override
+//        public SortedMultiset<Integer> extractOutput() {
+//            SortedMultiset<Integer> output = TreeMultiset.create();
+//            output.addAll(histogram);
+//            return output;
+//        }
+//    }
 
 
     ReadFilter isMappedPair = r -> r.getReadPairedFlag() &&
@@ -99,46 +111,6 @@ public class InsertSizeMetricsDataflowTransform extends PTransformSAM<InsertSize
             !r.getDuplicateReadFlag() &&
             r.getInferredInsertSize() != 0;
 
-
-    // Calculates InsertSizeMetrics for all METRIC_ACCUMULATION_LEVELs provided
-    private InsertSizeMetricsCollector multiCollector;
-
-    public InsertSizeMetricsDataflowTransform(Arguments arguments) {
-
-    }
-
-
-
-    private InsertSizeMetricsCollector setupCollector(final SAMFileHeader header, final Arguments arguments) {
-        //Delegate actual collection to InsertSizeMetricCollector
-        return new InsertSizeMetricsCollector(arguments.METRIC_ACCUMULATION_LEVEL, header.getReadGroups(), arguments.MINIMUM_PCT, arguments.HISTOGRAM_WIDTH, arguments.DEVIATIONS);
-    }
-
-    @Override
-    protected void acceptRead(final SAMRecord record, final ReferenceSequence ref) {
-        multiCollector.acceptRecord(record, ref);
-    }
-
-    @Override
-    protected void finish() {
-        multiCollector.finish();
-
-        final MetricsFile<InsertSizeMetrics, Integer> file = getMetricsFile();
-        multiCollector.addAllLevelsToFile(file);
-
-        if(file.getNumHistograms() == 0) {
-            //can happen if user sets MINIMUM_PCT = 0.5, etc.
-            log.warn("All data categories were discarded because they contained < " + MINIMUM_PCT +
-                    " of the total aligned paired data.");
-            final InsertSizeMetricsCollector.PerUnitInsertSizeMetricsCollector allReadsCollector
-                    = (InsertSizeMetricsCollector.PerUnitInsertSizeMetricsCollector) multiCollector.getAllReadsCollector();
-            log.warn("Total mapped pairs in all categories: " + (allReadsCollector == null ? allReadsCollector : allReadsCollector.getTotalInserts()));
-        }
-        else  {
-            file.write(OUTPUT);
-
-        }
-    }
 
 
 
