@@ -9,6 +9,7 @@ import org.broadinstitute.hellbender.utils.read.ReadUtils;
 import org.broadinstitute.hellbender.utils.read.markduplicates.*;
 
 import java.io.File;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -490,7 +491,7 @@ public final class MarkDuplicates extends AbstractMarkDuplicatesCommandLineProgr
     }
 
     /** Comparator for ReadEndsForMarkDuplicates that orders by read1 position then pair orientation then read2 position. */
-    static class ReadEndsMDComparator implements Comparator<ReadEndsForMarkDuplicates> {
+    static class ReadEndsMDComparator implements Comparator<ReadEndsForMarkDuplicates>, Serializable {
         public int compare(final ReadEndsForMarkDuplicates lhs, final ReadEndsForMarkDuplicates rhs) {
             int retval = lhs.libraryId - rhs.libraryId;
             if (retval == 0) retval = lhs.read1ReferenceIndex - rhs.read1ReferenceIndex;
