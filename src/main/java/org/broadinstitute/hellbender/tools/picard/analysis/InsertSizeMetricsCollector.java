@@ -181,7 +181,7 @@ public final class InsertSizeMetricsCollector extends MultiLevelCollector<Insert
 
 // Arguments that need to be calculated once per SAMRecord that are then passed to each PerUnitMetricCollector
 // for the given record
-final class InsertSizeCollectorArgs {
+final class InsertSizeCollectorArgs  {
     private final int insertSize;
     private final SamPairUtil.PairOrientation po;
 

@@ -15,7 +15,7 @@ import org.broadinstitute.hellbender.utils.R.RScriptExecutor;
 import org.broadinstitute.hellbender.utils.io.Resource;
 
 import java.io.File;
-import java.util.*;
+import java.util.Set;
 
 /**
  * Command line program to read non-duplicate insert sizes, create a Histogram
@@ -97,7 +97,7 @@ public final class CollectInsertSizeMetrics extends SinglePassSamProgram {
     protected void finish() {
         multiCollector.finish();
 
-        final MetricsFile<InsertSizeMetrics, Integer> file = CommandLineProgram.getMetricsFile();
+        final MetricsFile<InsertSizeMetrics, Integer> file = getMetricsFile();
         multiCollector.addAllLevelsToFile(file);
 
         if(file.getNumHistograms() == 0) {

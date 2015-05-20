@@ -5,7 +5,7 @@ import htsjdk.samtools.util.Histogram;
 
 import java.io.Serializable;
 
-public class DataflowHistogram<K extends Comparable<K>> extends Histogram<K> implements Serializable, Combine.AccumulatingCombineFn.Accumulator<K, DataflowHistogram<K>, Histogram<K>>{
+public class DataflowHistogram<K extends Comparable<K>> extends Histogram<K> implements Serializable, Combine.AccumulatingCombineFn.Accumulator<K, DataflowHistogram<K>, DataflowHistogram<K>>{
 
     @Override
     public void addInput(K input) {
@@ -18,7 +18,7 @@ public class DataflowHistogram<K extends Comparable<K>> extends Histogram<K> imp
     }
 
     @Override
-    public Histogram<K> extractOutput() {
+    public DataflowHistogram<K> extractOutput() {
         return this;
     }
 
