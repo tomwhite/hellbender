@@ -1,11 +1,14 @@
 package org.broadinstitute.hellbender.tools.dataflow.transforms;
 
+import com.google.cloud.dataflow.sdk.coders.DefaultCoder;
+import com.google.cloud.dataflow.sdk.coders.SerializableCoder;
 import com.google.cloud.dataflow.sdk.transforms.Combine;
 import htsjdk.samtools.util.Histogram;
 
 import java.io.Serializable;
 
-public class DataflowHistogram<K extends Comparable<K>> extends Histogram<K> implements Serializable, Combine.AccumulatingCombineFn.Accumulator<K, DataflowHistogram<K>, DataflowHistogram<K>>{
+@DefaultCoder(SerializableCoder.class)
+public class DataflowHistogram<K extends Comparable<K>> extends Histogram<K> implements Combine.AccumulatingCombineFn.Accumulator<K, DataflowHistogram<K>, DataflowHistogram<K>>{
 
     @Override
     public void addInput(K input) {

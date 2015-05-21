@@ -2,12 +2,16 @@ package org.broadinstitute.hellbender.tools.dataflow.transforms;
 
 
 import com.google.api.services.genomics.model.Read;
-import com.google.cloud.dataflow.sdk.transforms.*;
+import com.google.cloud.dataflow.sdk.coders.AvroCoder;
+import com.google.cloud.dataflow.sdk.coders.DefaultCoder;
+import com.google.cloud.dataflow.sdk.coders.SerializableCoder;
+import com.google.cloud.dataflow.sdk.transforms.Combine;
+import com.google.cloud.dataflow.sdk.transforms.Filter;
+import com.google.cloud.dataflow.sdk.transforms.ParDo;
 import com.google.cloud.dataflow.sdk.values.KV;
 import com.google.cloud.dataflow.sdk.values.PCollection;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SamPairUtil;
-import htsjdk.samtools.metrics.Header;
 import htsjdk.samtools.metrics.MetricBase;
 import htsjdk.samtools.metrics.MetricsFile;
 import htsjdk.samtools.util.Histogram;
@@ -66,11 +70,11 @@ public class InsertSizeMetricsDataflowTransform extends PTransformSAM<InsertSize
 
         PCollection<Read> filtered = input.apply(Filter.by(new SAMSerializableFunction<>(getHeader(), isMappedPair)));
 
-        PCollection<KV<InsertSizeMetricsKey, Integer>> kvPairs = filtered.apply(ParDo.of(new DataFlowSAMFn<KV<InsertSizeMetricsKey, Integer>>(getHeader()) {
+        PCollection<KV<Key, Integer>> kvPairs = filtered.apply(ParDo.of(new DataFlowSAMFn<KV<Key, Integer>>(getHeader()) {
             @Override
             protected void apply(SAMRecord read) {
                 Integer metric = computeMetric(read);
-                InsertSizeMetricsKey key = computeKey(read);
+                Key key = computeKey(read);
                 output(KV.of(key, metric));
             }
         }));
@@ -78,8 +82,9 @@ public class InsertSizeMetricsDataflowTransform extends PTransformSAM<InsertSize
         Combine.CombineFn<Integer, DataflowHistogram<Integer>, DataflowHistogram<Integer>> combiner = new DataflowHistogrammer<>();
 
 
-        PCollection<KV<InsertSizeMetricsKey,DataflowHistogram<Integer>>> histograms = kvPairs.apply(Combine.<InsertSizeMetricsKey, Integer,DataflowHistogram<Integer>>perKey(combiner));
-        PCollection<MetricsFileDataflow<InsertSizeMetrics, Integer>> metricsFile = histograms.apply(Combine.globally( new CombineMetricsIntoFile()));
+        PCollection<KV<Key,DataflowHistogram<Integer>>> histograms =   kvPairs.apply(Combine.<Key, Integer,DataflowHistogram<Integer>>perKey(combiner));
+        PCollection<MetricsFileDataflow<InsertSizeMetrics, Integer>> metricsFile = histograms.apply(Combine.globally(new CombineMetricsIntoFile(args.DEVIATIONS, args.HISTOGRAM_WIDTH)));
+
         return metricsFile;
     }
 
@@ -91,24 +96,30 @@ public class InsertSizeMetricsDataflowTransform extends PTransformSAM<InsertSize
         }
     }
 
-    public static class MetricsFileDataflow<BEAN extends MetricBase & Serializable, HKEY extends Comparable> extends MetricsFile<BEAN, HKEY> {
+    @DefaultCoder(SerializableCoder.class)
+    //public static class MetricsFileDataflow<BEAN extends MetricBase & Serializable, HKEY extends Comparable> extends MetricsFile<BEAN, HKEY> implements Serializable {
+    public static class MetricsFileDataflow<BEAN extends MetricBase & Serializable , HKEY extends Comparable> extends MetricsFile<BEAN, HKEY> implements Serializable {
     }
 
-    public class CombineMetricsIntoFile
-            extends Combine.AccumulatingCombineFn<KV<InsertSizeMetricsKey,DataflowHistogram<Integer>>,CombineMetricsIntoFile,MetricsFileDataflow<InsertSizeMetrics,Integer>>
-            implements Combine.AccumulatingCombineFn.Accumulator<KV<InsertSizeMetricsKey,DataflowHistogram<Integer>>,CombineMetricsIntoFile,MetricsFileDataflow<InsertSizeMetrics,Integer>> {
+    public static class CombineMetricsIntoFile
+            extends Combine.AccumulatingCombineFn<KV<Key,DataflowHistogram<Integer>>,CombineMetricsIntoFile,MetricsFileDataflow<InsertSizeMetrics,Integer>>
+            implements Combine.AccumulatingCombineFn.Accumulator<KV<Key,DataflowHistogram<Integer>>,CombineMetricsIntoFile,MetricsFileDataflow<InsertSizeMetrics,Integer>> {
 
         private final MetricsFileDataflow<InsertSizeMetrics,Integer> metricsFile;
+        private final double DEVIATIONS;
+        private final Integer HISTOGRAM_WIDTH;  
 
-        public CombineMetricsIntoFile() {
+        public CombineMetricsIntoFile(double deviations, Integer histogramWidth) {
             metricsFile = new MetricsFileDataflow<>();
+            this.DEVIATIONS = deviations;
+            this.HISTOGRAM_WIDTH = histogramWidth;
         }
 
 
         @Override
-        public void addInput(KV<InsertSizeMetricsKey, DataflowHistogram<Integer>> input) {
+        public void addInput(KV<Key, DataflowHistogram<Integer>> input) {
             final DataflowHistogram<Integer> Histogram = input.getValue();
-            final InsertSizeMetricsKey key = input.getKey();
+            final Key key = input.getKey();
             final SamPairUtil.PairOrientation pairOrientation = key.orientation;
             final double total = Histogram.getCount();
 
@@ -168,17 +179,26 @@ public class InsertSizeMetricsDataflowTransform extends PTransformSAM<InsertSize
 
                 // Trim the Histogram down to get rid of outliers that would make the chart useless.
                 final htsjdk.samtools.util.Histogram<Integer> trimmedHisto = Histogram; //alias it
-                if (args.HISTOGRAM_WIDTH == null) {
-                    args.HISTOGRAM_WIDTH = (int) (metrics.MEDIAN_INSERT_SIZE + (args.DEVIATIONS * metrics.MEDIAN_ABSOLUTE_DEVIATION));
-                }
+                int actualWidth = inferHistogramWidth(HISTOGRAM_WIDTH, metrics, DEVIATIONS);
 
-                trimmedHisto.trimByWidth(args.HISTOGRAM_WIDTH);
+                trimmedHisto.trimByWidth(actualWidth);
 
                 metrics.MEAN_INSERT_SIZE = trimmedHisto.getMean();
                 metrics.STANDARD_DEVIATION = trimmedHisto.getStandardDeviation();
 
                 metricsFile.addHistogram(trimmedHisto);
                 metricsFile.addMetric(metrics);
+            }
+        }
+
+        /**
+         * If histogramWidth is null infer a value for it
+         */
+        private static int inferHistogramWidth(Integer histogramWidth, InsertSizeMetrics metrics, double deviations) {
+            if (histogramWidth == null) {
+                return (int) (metrics.MEDIAN_INSERT_SIZE + (deviations * metrics.MEDIAN_ABSOLUTE_DEVIATION));
+            } else {
+                return histogramWidth;
             }
         }
 
@@ -197,7 +217,7 @@ public class InsertSizeMetricsDataflowTransform extends PTransformSAM<InsertSize
 
         @Override
         public CombineMetricsIntoFile createAccumulator() {
-            return new CombineMetricsIntoFile();
+            return new CombineMetricsIntoFile(this.DEVIATIONS, this.HISTOGRAM_WIDTH);
         }
     }
 
@@ -215,32 +235,22 @@ public class InsertSizeMetricsDataflowTransform extends PTransformSAM<InsertSize
         return read.getInferredInsertSize();
     }
 
-    private InsertSizeMetricsKey computeKey(SAMRecord read) {
-        return new InsertSizeMetricsKey(read);
+    private Key computeKey(SAMRecord read) {
+        return Key.of(read);
     }
 
-    private final static class InsertSizeMetricsKey {
-        private final SamPairUtil.PairOrientation orientation;
+    @DefaultCoder(AvroCoder.class)
+    public final static class Key {
+        private SamPairUtil.PairOrientation orientation;
 
-        public InsertSizeMetricsKey(SAMRecord r){
-            orientation = SamPairUtil.getPairOrientation(r);
+        public Key(){};
+
+        public static Key of(SAMRecord r){
+            Key key = new Key();
+            key.orientation = SamPairUtil.getPairOrientation(r);
+            return key;
         }
 
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-
-            InsertSizeMetricsKey key = (InsertSizeMetricsKey) o;
-
-            return orientation == key.orientation;
-
-        }
-
-        @Override
-        public int hashCode() {
-            return orientation != null ? orientation.hashCode() : 0;
-        }
     }
 
 
