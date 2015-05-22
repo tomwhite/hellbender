@@ -226,11 +226,11 @@ uploadArchives {
             mavenDeployer {
                 beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
 
-                repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                repository(url: "http://artifactory.broadinstitute.org/artifactory/libs-release") {
                     authentication(userName: sonatypeUsername, password: sonatypePassword)
                 }
 
-                snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots") {
+                snapshotRepository(url: "http://artifactory.broadinstitute.org/artifactory/libs-snapshot") {
                     authentication(userName: sonatypeUsername, password: sonatypePassword)
                 }
 
