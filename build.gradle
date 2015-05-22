@@ -1,15 +1,24 @@
 buildscript {
     repositories {
         mavenCentral()
-     }
-
+        maven {
+            url 'http://artifactory.broadinstitute.org/artifactory/plugins-release'
+            credentials {
+                username = "anonymous"
+                password = ""
+            }
+        }
+    }
     dependencies {
         classpath 'org.kt3k.gradle.plugin:coveralls-gradle-plugin:2.3.1'
+        //Check for the latest version here: http://plugins.gradle.org/plugin/com.jfrog.artifactory
+        classpath "org.jfrog.buildinfo:build-info-extractor-gradle:3.1.0"
     }
 }
 
 plugins {
     id "de.undercouch.download" version "1.2"
+
 }
 
 import de.undercouch.gradle.tasks.download.Download
@@ -19,8 +28,8 @@ apply plugin: 'idea'
 apply plugin: 'application'
 apply plugin: "jacoco"
 apply plugin: 'com.github.kt3k.coveralls'
-apply plugin: 'maven'
-apply plugin: 'signing'
+apply plugin: 'maven-publish'
+apply plugin: 'com.jfrog.artifactory-upload'
 
 mainClassName = "org.broadinstitute.hellbender.Main"
 
@@ -206,63 +215,27 @@ artifacts {
     archives sourcesJar
 }
 
-/**
- * Sign non-snapshot releases with our secret key.  This should never need to be invoked directly.
- */
-signing {
-    required { isRelease && gradle.taskGraph.hasTask("uploadArchives") }
-    sign configurations.archives
-}
+artifactory {
+    contextUrl = "${artifactoryContextUrl}"   //The base Artifactory URL if not overridden by the publisher/resolver
+    publish {
+        repository {
+            repoKey = 'libs-snapshot-local'
+            username = "${artifactoryUsername}"
+            password = "${artifactoryPassword}"
+            maven = true
 
-/**
- * Upload a release to sonatype.  You must be an authorized uploader and have your sonatype
- * username and password information in your gradle properties file.  See the readme for more info.
- *
- * For releasing to your local maven repo, use gradle install
- */
-uploadArchives {
-    if(project.hasProperty('sonatypeUsername') && project.hasProperty('sonatypePassword')){
-        repositories {
-            mavenDeployer {
-                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-
-                repository(url: "http://artifactory.broadinstitute.org/artifactory/libs-release") {
-                    authentication(userName: sonatypeUsername, password: sonatypePassword)
-                }
-
-                snapshotRepository(url: "http://artifactory.broadinstitute.org/artifactory/libs-snapshot") {
-                    authentication(userName: sonatypeUsername, password: sonatypePassword)
-                }
-
-                pom.project {
-                    name 'Hellbender'
-                    packaging 'jar'
-                    description 'Development on GATK4'
-                    url 'http://github.com/broadinstitute/hellbender'
-
-                    scm {
-                        url 'scm:git@github.com:broadinstitute/hellbender.git'
-                        connection 'scm:git@github.com:broadinstitute/hellbender.git'
-                        developerConnection 'scm:git@github.com:broadinstitute/hellbender.git'
-                    }
-
-                    licenses {
-                        license {
-                            name 'BSD 3-Clause'
-                            url 'https://github.com/broadinstitute/hellbender/blob/master/LICENSE.TXT'
-                            distribution 'repo'
-                        }
-                    }
-                }
-            }
         }
-    } else {
-        doFirst({
-            logger.error( 'Users are not generally supposed to upload archives.  ' +
-                'To upload archives you must specify certain information in your gradle.properties. See the README' +
-                ' for more information.' )
-            throw new Exception("Missing sonatype username or password, please see the README for properties that must be specified for uploading an archive.")}
-        )
-
     }
+    resolve {
+        repository {
+            repoKey = 'libs-release'
+            username = "${artifactoryUsername}"
+            password = "${artifactoryPassword}"
+            maven = true
+
+        }
+    }
+
 }
+
+

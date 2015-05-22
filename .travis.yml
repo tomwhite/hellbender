@@ -6,6 +6,8 @@ env:
   - TERM=dumb
   global:
   - secure: RA4LKD82cW+0xPayPVAWSpYqJu5uoPcz7oXXYtYNVuilFmS8PGYx0g/BXs4QMvQsGMt6aMLN8m7lMAPN5XTH/8JSeM3VmQ3mdpgNdP+p3CVlwrapZ2lTq27Wb/E8J1CGEHOg76z716t//FUElyC/gdhS+tfBmXk3YanM5fMXEHs=
+  - secure: NXyOuw/G3G3OeyXwlqUD7qTO3b3dajRIIEMwPJtb9YgG2PrUJT2G1HwM+7D4obHLNZMgFbmvRWdAL/ESsFuFI3xWqOR1lAk+PZ8KIhyQOBa5k1h/NF3tlwwO27Uc/F5hTdy4MIworhlyFjONO40T7qvumgrXHjAd+YJrZGGPbOI=
+  - secure: nOX995alh5ZwS6JLceyed/YkUic7ieFUHIaeYSzNcBEjZmAN0mnJcKzb3e04drSs2lGEilneO4R+oTNPkcQ6O3LIQYgx7+1IkQJA3BU69t79pIWV7ioFfihL68i2+adU4ZlJHnuoFHf7rcEE04nT0XLTQ+V+w/ZEYx9qFqE3oqY=
 cache:
   directories:
   - ~/.gradle
@@ -17,3 +19,4 @@ before_install:
 - R --version
 after_success:
 - gradle jacocoTestReport coveralls
+- gradle artifactoryPublish
