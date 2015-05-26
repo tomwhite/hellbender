@@ -23,6 +23,7 @@ public final class InsertSizeMetricsTransformUnitTest {
     public void testInsertSizeMetricsTransform(){
         File bam = new File(BaseTest.publicTestDir, "org/broadinstitute/hellbender/tools/picard/analysis/CollectInsertSizeMetrics/insert_size_metrics_test.bam");
         Pipeline p = TestPipeline.create();
+        p.getCoderRegistry().registerCoder(InsertSizeMetricsDataflowTransform.MetricsFileDataflow.class, SerializableCoder.of(InsertSizeMetricsDataflowTransform.MetricsFileDataflow.class));
         DataflowWorkarounds.registerCoder(p,DataflowHistogram.class, SerializableCoder.of(DataflowHistogram.class) );
         DataflowWorkarounds.registerGenomicsCoders(p);
         List<SimpleInterval> intervals = Lists.newArrayList(new SimpleInterval("1", 1, 249250621));

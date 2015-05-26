@@ -83,7 +83,7 @@ public class InsertSizeMetricsDataflowTransform extends PTransformSAM<InsertSize
 
 
         PCollection<KV<Key,DataflowHistogram<Integer>>> histograms =   kvPairs.apply(Combine.<Key, Integer,DataflowHistogram<Integer>>perKey(combiner));
-        PCollection<MetricsFileDataflow<InsertSizeMetrics, Integer>> metricsFile = histograms.apply(Combine.globally(new CombineMetricsIntoFile(args.DEVIATIONS, args.HISTOGRAM_WIDTH)));
+        PCollection<MetricsFileDataflow<InsertSizeMetrics, Integer>> metricsFile = histograms.apply(Combine.globally(new CombineMetricsIntoFile(args.DEVIATIONS, args.HISTOGRAM_WIDTH))).setCoder(SerializableCoder.of((Class<MetricsFileDataflow<InsertSizeMetrics,Integer>>) new MetricsFileDataflow<InsertSizeMetrics,Integer>().getClass()));
 
         return metricsFile;
     }
@@ -96,7 +96,7 @@ public class InsertSizeMetricsDataflowTransform extends PTransformSAM<InsertSize
         }
     }
 
-    @DefaultCoder(SerializableCoder.class)
+
     //public static class MetricsFileDataflow<BEAN extends MetricBase & Serializable, HKEY extends Comparable> extends MetricsFile<BEAN, HKEY> implements Serializable {
     public static class MetricsFileDataflow<BEAN extends MetricBase & Serializable , HKEY extends Comparable> extends MetricsFile<BEAN, HKEY> implements Serializable {
     }
