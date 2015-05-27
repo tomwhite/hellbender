@@ -4,7 +4,7 @@ addons:
     sources:
     - r-packages-precise
     packages:
-    - r-base
+    - r-cran-boot
 jdk:
 - oraclejdk8
 env:
