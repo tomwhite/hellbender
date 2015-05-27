@@ -54,4 +54,15 @@ public final class InsertSizeMetricsTransformUnitTest{
             Assert.assertEquals(c.element().getAllHistograms().get(0).getCount(), "some string");
         }
     }
+
+    public static class PrintLn<T> extends DoFn<T,String>{
+
+        @Override
+        public void processElement(ProcessContext c) throws Exception {
+            String str = c.element().toString();
+            System.out.println(str);
+            c.output(str);
+        }
+    }
+
 }
