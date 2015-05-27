@@ -38,7 +38,7 @@ public final class SplitNCigarReadsUnitTest extends BaseTest {
 
     @Test
     public void splitReadAtN() {
-        final int cigarStringLength = 10;
+        final int cigarStringLength = 9;
         final List<Cigar> cigarList = ReadClipperTestUtils.generateCigarList(cigarStringLength, cigarElements);
 
         // For Debugging use those lines (instead of above cigarList) to create specific read:
