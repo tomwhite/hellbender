@@ -24,15 +24,10 @@ public final class MarkDuplicatesReadsKeyTest {
         final boolean negativeStrand = false;
         read.setReadNegativeStrandFlag(negativeStrand);
         final String strandStr = negativeStrand ? "r": "f";
-<<<<<<< HEAD
         final String key = "-" + "|" + refIndex + "|" + alignmentStart + "|" + strandStr;
 
         return new Object[][]{
                 new Object[]{read, key},
-=======
-        return new Object[][]{
-                new Object[]{read, "-" + "|" + refIndex + "|" + alignmentStart + "|" + strandStr},
->>>>>>> ecd7e12... adding tests for keys
         };
     }
 

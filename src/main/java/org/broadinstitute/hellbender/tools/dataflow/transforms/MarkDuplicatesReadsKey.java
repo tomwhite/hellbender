@@ -7,12 +7,6 @@ import htsjdk.samtools.SAMFileHeader;
 import htsjdk.samtools.SAMReadGroupRecord;
 import htsjdk.samtools.SAMRecord;
 
-<<<<<<< HEAD
-=======
-import static org.broadinstitute.hellbender.tools.dataflow.GenomicsReadUtils.orientation;
-import static org.broadinstitute.hellbender.tools.dataflow.GenomicsReadUtils.unclippedCoordinate;
-
->>>>>>> ecd7e12... adding tests for keys
 /**
  * Encodes a unique key for read, read pairs and fragments. Used to identify duplicates for MarkDuplicates.
  */
@@ -22,11 +16,7 @@ public final class MarkDuplicatesReadsKey {
      * Makes a unique key for the fragment.
      */
     public static String keyForFragment(final SAMFileHeader header, final Read read) {
-<<<<<<< HEAD
         //HACK: convert back to SAMRecord but fastest to code
-=======
-        //HACK to convert back to SAMRecord but fastest to code
->>>>>>> ecd7e12... adding tests for keys
         final SAMRecord samRecord = GenomicsConverter.makeSAMRecord(read, header);
         return String.format(
                 "%s|%d|%d|%s",
@@ -35,8 +25,6 @@ public final class MarkDuplicatesReadsKey {
                 unclippedCoordinate(samRecord),
                 orientation(samRecord));
     }
-
-<<<<<<< HEAD
 
     /**
      * Makes a unique key for the paired reads.
@@ -55,25 +43,6 @@ public final class MarkDuplicatesReadsKey {
                 unclippedCoordinate(samRecordSecond),
                 orientation(samRecordSecond));
     }
-=======
-//
-//    /**
-//     * Makes a unique key for the paired reads.
-//     */
-//    public static String keyForPairedEnds(final SAMFileHeader header, final Read first, final Read second) {
-//        final String key = keyForFragment(header, first);
-//        if (second == null) {
-//            return key;
-//        }
-//        return String.format(
-//                "%s|%d|%d|%s",
-//                key,
-//                index(header, second.getReferenceName()),
-//                unclippedCoordinate(second),
-//                orientation(second));
-//    }
->>>>>>> ecd7e12... adding tests for keys
-
 
     /**
      * Makes a unique key for the pair.
@@ -98,19 +67,11 @@ public final class MarkDuplicatesReadsKey {
         return (lib == null) ? "-" : lib;
     }
 
-<<<<<<< HEAD
     public static int index(final SAMFileHeader header, final String ref) {
         return header.getSequenceDictionary().getSequenceIndex(ref);
     }
 
     static int unclippedCoordinate(final SAMRecord record) {
-=======
-    private static int index(final SAMFileHeader header, final String ref) {
-        return header.getSequenceDictionary().getSequenceIndex(ref);
-    }
-
-    private static int unclippedCoordinate(final SAMRecord record) {
->>>>>>> ecd7e12... adding tests for keys
         return record.getReadNegativeStrandFlag()
                 ? record.getUnclippedEnd()
                 : record.getUnclippedStart();
