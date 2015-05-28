@@ -63,6 +63,7 @@ installApp.dependsOn downloadGsaLibFile
 build.dependsOn installApp
 check.dependsOn installApp
 
+
 dependencies {
     compile files("${System.properties['java.home']}/../lib/tools.jar")
 

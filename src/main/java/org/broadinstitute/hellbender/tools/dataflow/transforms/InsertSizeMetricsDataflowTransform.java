@@ -4,7 +4,6 @@ package org.broadinstitute.hellbender.tools.dataflow.transforms;
 import com.google.api.services.genomics.model.Read;
 import com.google.cloud.dataflow.sdk.coders.AvroCoder;
 import com.google.cloud.dataflow.sdk.coders.DefaultCoder;
-import com.google.cloud.dataflow.sdk.coders.SerializableCoder;
 import com.google.cloud.dataflow.sdk.transforms.Combine;
 import com.google.cloud.dataflow.sdk.transforms.Filter;
 import com.google.cloud.dataflow.sdk.transforms.ParDo;
@@ -27,6 +26,7 @@ import org.broadinstitute.hellbender.metrics.MetricAccumulationLevel;
 import org.broadinstitute.hellbender.tools.picard.analysis.InsertSizeMetrics;
 
 import java.io.Serializable;
+import java.io.StringWriter;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -68,22 +68,24 @@ public class InsertSizeMetricsDataflowTransform extends PTransformSAM<InsertSize
     @Override
     public PCollection<MetricsFileDataflow<InsertSizeMetrics, Integer>> apply(PCollection<Read> input) {
 
-        PCollection<Read> filtered = input.apply(Filter.by(new SAMSerializableFunction<>(getHeader(), isMappedPair)));
+        PCollection<Read> filtered = input.apply(Filter.by(new SAMSerializableFunction<>(getHeader(), isSecondInMappedPair))).setName("Filter singletons and first of pair");
 
         PCollection<KV<Key, Integer>> kvPairs = filtered.apply(ParDo.of(new DataFlowSAMFn<KV<Key, Integer>>(getHeader()) {
             @Override
             protected void apply(SAMRecord read) {
                 Integer metric = computeMetric(read);
-                Key key = computeKey(read);
+                Key key = Key.of(read);
+
                 output(KV.of(key, metric));
             }
-        }));
+        })).setName("Calculate metric and key");
 
         Combine.CombineFn<Integer, DataflowHistogram<Integer>, DataflowHistogram<Integer>> combiner = new DataflowHistogrammer<>();
 
-
-        PCollection<KV<Key,DataflowHistogram<Integer>>> histograms =   kvPairs.apply(Combine.<Key, Integer,DataflowHistogram<Integer>>perKey(combiner));
-        PCollection<MetricsFileDataflow<InsertSizeMetrics, Integer>> metricsFile = histograms.apply(Combine.globally(new CombineMetricsIntoFile(args.DEVIATIONS, args.HISTOGRAM_WIDTH))).setCoder(SerializableCoder.of((Class<MetricsFileDataflow<InsertSizeMetrics,Integer>>) new MetricsFileDataflow<InsertSizeMetrics,Integer>().getClass()));
+        PCollection<KV<Key,DataflowHistogram<Integer>>> histograms =   kvPairs.apply(Combine.<Key, Integer,DataflowHistogram<Integer>>perKey(combiner)).setName("Add reads to histograms");
+        PCollection<MetricsFileDataflow<InsertSizeMetrics, Integer>> metricsFile = histograms.apply(Combine.globally(new CombineMetricsIntoFile(args.DEVIATIONS, args.HISTOGRAM_WIDTH)))
+                //.setCoder(SerializableCoder.of((Class<MetricsFileDataflow<InsertSizeMetrics, Integer>>) new MetricsFileDataflow<InsertSizeMetrics, Integer>().getClass()))
+                .setName("Add histograms and metrics to MetricsFile");
 
         return metricsFile;
     }
@@ -97,8 +99,13 @@ public class InsertSizeMetricsDataflowTransform extends PTransformSAM<InsertSize
     }
 
 
-    //public static class MetricsFileDataflow<BEAN extends MetricBase & Serializable, HKEY extends Comparable> extends MetricsFile<BEAN, HKEY> implements Serializable {
     public static class MetricsFileDataflow<BEAN extends MetricBase & Serializable , HKEY extends Comparable> extends MetricsFile<BEAN, HKEY> implements Serializable {
+        @Override
+        public String toString(){
+            StringWriter writer = new StringWriter();
+            write(writer);
+            return writer.toString();
+        }
     }
 
     public static class CombineMetricsIntoFile
@@ -222,7 +229,7 @@ public class InsertSizeMetricsDataflowTransform extends PTransformSAM<InsertSize
     }
 
 
-    ReadFilter isMappedPair = r -> r.getReadPairedFlag() &&
+    ReadFilter isSecondInMappedPair = r -> r.getReadPairedFlag() &&
             !r.getReadUnmappedFlag() &&
             !r.getMateUnmappedFlag() &&
             !r.getFirstOfPairFlag() &&
@@ -232,22 +239,24 @@ public class InsertSizeMetricsDataflowTransform extends PTransformSAM<InsertSize
 
 
     private Integer computeMetric(SAMRecord read) {
-        return read.getInferredInsertSize();
-    }
-
-    private Key computeKey(SAMRecord read) {
-        return Key.of(read);
+        return Math.abs(read.getInferredInsertSize());
     }
 
     @DefaultCoder(AvroCoder.class)
     public final static class Key {
         private SamPairUtil.PairOrientation orientation;
+        private String readGroup;
+        private String library;
+        private String sample;
 
         public Key(){};
 
-        public static Key of(SAMRecord r){
+        public static Key of(SAMRecord r, boolean includeLibrary, boolean includeReadGroup, boolean includeSample){
             Key key = new Key();
             key.orientation = SamPairUtil.getPairOrientation(r);
+            key.readGroup = includeReadGroup ? r.getReadGroup().getId() : null;
+            key.library = includeLibrary ? r.getReadGroup().getLibrary() : null;
+            key.sample = includeSample ? r.getReadGroup().getSample(): null;
             return key;
         }
 

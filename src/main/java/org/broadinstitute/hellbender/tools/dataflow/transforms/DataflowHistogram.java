@@ -25,5 +25,11 @@ public class DataflowHistogram<K extends Comparable<K>> extends Histogram<K> imp
         return this;
     }
 
+    @Override
+    public String toString(){
+        return "Histogram: #bins=" + this.size() + " mean=" + this.getMean();
+    }
+
+
 }
 

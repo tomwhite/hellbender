@@ -3,6 +3,7 @@ package org.broadinstitute.hellbender.engine.dataflow;
 import com.google.api.client.repackaged.com.google.common.annotations.VisibleForTesting;
 import com.google.cloud.dataflow.sdk.Pipeline;
 import com.google.cloud.dataflow.sdk.PipelineResult;
+import com.google.cloud.dataflow.sdk.coders.SerializableCoder;
 import com.google.cloud.dataflow.sdk.options.PipelineOptionsFactory;
 import com.google.cloud.dataflow.sdk.runners.BlockingDataflowPipelineRunner;
 import com.google.cloud.dataflow.sdk.runners.DataflowPipelineRunner;
@@ -15,6 +16,7 @@ import org.broadinstitute.hellbender.cmdline.CommandLineParser;
 import org.broadinstitute.hellbender.cmdline.CommandLineProgram;
 import org.broadinstitute.hellbender.exceptions.GATKException;
 import org.broadinstitute.hellbender.exceptions.UserException;
+import org.broadinstitute.hellbender.tools.dataflow.transforms.InsertSizeMetricsDataflowTransform;
 
 import java.io.File;
 import java.io.Serializable;
@@ -86,6 +88,7 @@ public abstract class DataflowCommandLineProgram extends CommandLineProgram impl
         }
         final Pipeline p = Pipeline.create(options);
         DataflowWorkarounds.registerGenomicsCoders(p);
+        DataflowWorkarounds.registerCoder(p, InsertSizeMetricsDataflowTransform.MetricsFileDataflow.class, SerializableCoder.of(InsertSizeMetricsDataflowTransform.MetricsFileDataflow.class));
         setupPipeline(p);
         runPipeline(p);
         afterPipeline(p);
