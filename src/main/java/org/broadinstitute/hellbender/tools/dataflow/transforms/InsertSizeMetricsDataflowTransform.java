@@ -27,6 +27,7 @@ import org.broadinstitute.hellbender.tools.picard.analysis.InsertSizeMetrics;
 
 import java.io.Serializable;
 import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -74,9 +75,8 @@ public class InsertSizeMetricsDataflowTransform extends PTransformSAM<InsertSize
             @Override
             protected void apply(SAMRecord read) {
                 Integer metric = computeMetric(read);
-                Key key = Key.of(read);
-
-                output(KV.of(key, metric));
+                List<Key> keys = Key.getKeysForAllAggregationLevels(read, true,true,true,true);
+                keys.stream().forEach(k -> output(KV.of(k,metric)));
             }
         })).setName("Calculate metric and key");
 
@@ -243,6 +243,20 @@ public class InsertSizeMetricsDataflowTransform extends PTransformSAM<InsertSize
     }
 
     @DefaultCoder(AvroCoder.class)
+    public final static class InsertSizeGroup {
+        private SamPairUtil.PairOrientation orientation;
+
+        private InsertSizeGroup(){};
+
+        public static InsertSizeGroup of(SAMRecord read){
+            InsertSizeGroup group = new InsertSizeGroup();
+            group.orientation =SamPairUtil.getPairOrientation(read);
+            return group;
+        }
+    }
+
+
+    @DefaultCoder(AvroCoder.class)
     public final static class Key {
         private SamPairUtil.PairOrientation orientation;
         private String readGroup;
@@ -251,13 +265,31 @@ public class InsertSizeMetricsDataflowTransform extends PTransformSAM<InsertSize
 
         public Key(){};
 
-        public static Key of(SAMRecord r, boolean includeLibrary, boolean includeReadGroup, boolean includeSample){
+        public static Key of(final SAMRecord read,final boolean includeLibrary, final boolean includeReadGroup, final boolean includeSample){
             Key key = new Key();
-            key.orientation = SamPairUtil.getPairOrientation(r);
-            key.readGroup = includeReadGroup ? r.getReadGroup().getId() : null;
-            key.library = includeLibrary ? r.getReadGroup().getLibrary() : null;
-            key.sample = includeSample ? r.getReadGroup().getSample(): null;
+            key.orientation = SamPairUtil.getPairOrientation(read);
+            key.readGroup = includeReadGroup ? read.getReadGroup().getId() : null;
+            key.library = includeLibrary ? read.getReadGroup().getLibrary() : null;
+            key.sample = includeSample ? read.getReadGroup().getSample(): null;
             return key;
+        }
+
+        public static List<Key> getKeysForAllAggregationLevels(final SAMRecord read,final boolean includeAll, final boolean includeLibrary, final boolean includeReadGroup, final boolean includeSample){
+            final List<Key> keys = new ArrayList<>();
+            if(includeAll) {
+                keys.add(Key.of(read, false, false, false));
+            }
+            if(includeLibrary){
+                keys.add(Key.of(read,true, false, false));
+            }
+            if(includeReadGroup){
+                keys.add(Key.of(read, true, true, false));
+            }
+            if(includeSample){
+                keys.add(Key.of(read,true,true,true));
+            }
+            return keys;
+
         }
 
     }

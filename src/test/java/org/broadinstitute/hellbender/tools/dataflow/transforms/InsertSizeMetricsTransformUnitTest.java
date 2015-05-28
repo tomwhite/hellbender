@@ -13,6 +13,7 @@ import com.google.cloud.dataflow.sdk.values.PCollection;
 import com.google.cloud.genomics.dataflow.utils.DataflowWorkarounds;
 import com.google.common.collect.Lists;
 import htsjdk.samtools.SAMRecord;
+import org.broadinstitute.hellbender.engine.dataflow.ReadsSource;
 import org.broadinstitute.hellbender.tools.picard.analysis.InsertSizeMetrics;
 import org.broadinstitute.hellbender.utils.SimpleInterval;
 import org.broadinstitute.hellbender.utils.dataflow.DataflowUtils;
@@ -36,8 +37,15 @@ public final class InsertSizeMetricsTransformUnitTest{
         DataflowWorkarounds.registerCoder(p,DataflowHistogram.class, SerializableCoder.of(DataflowHistogram.class) );
         DataflowWorkarounds.registerGenomicsCoders(p);
         List<SimpleInterval> intervals = Lists.newArrayList(new SimpleInterval("1", 1, 249250621));
-        PCollection<Read> preads = DataflowUtils.getReadsFromLocalBams(p, intervals, Lists.newArrayList(bam));
-        PCollection<InsertSizeMetricsDataflowTransform.MetricsFileDataflow<InsertSizeMetrics,Integer>> presult = preads.apply(new InsertSizeMetricsDataflowTransform(new InsertSizeMetricsDataflowTransform.Arguments()));
+
+        ReadsSource source = new ReadsSource(bam.getAbsolutePath(), p);
+        PCollection<Read> preads = source.getReadPCollection(intervals);
+
+
+        InsertSizeMetricsDataflowTransform transform = new InsertSizeMetricsDataflowTransform(new InsertSizeMetricsDataflowTransform.Arguments());
+        transform.setHeader(source.getHeader());
+
+        PCollection<InsertSizeMetricsDataflowTransform.MetricsFileDataflow<InsertSizeMetrics,Integer>> presult = preads.apply(transform);
         //presult.apply(ParDo.of(new MetricsFileDataflowBooleanDoFn()));
         DirectPipelineRunner.EvaluationResults result = (DirectPipelineRunner.EvaluationResults)p.run();
         Assert.assertEquals(result.getPCollection(presult).get(0).toString(), "some string");
@@ -60,7 +68,7 @@ public final class InsertSizeMetricsTransformUnitTest{
     public void testHistogramCombiner(){
         Combine.CombineFn<KV<InsertSizeMetricsDataflowTransform.Key, DataflowHistogram<Integer>>,?, InsertSizeMetricsDataflowTransform.MetricsFileDataflow<InsertSizeMetrics,Integer>> combiner = new InsertSizeMetricsDataflowTransform.CombineMetricsIntoFile(10.0, null);
         SAMRecord read1 = ArtificialSAMUtils.createPair(ArtificialSAMUtils.createArtificialSamHeader(), "Read1", 100, 4, 200, true, false).get(0);
-        InsertSizeMetricsDataflowTransform.Key key = InsertSizeMetricsDataflowTransform.Key.of(read1);
+        InsertSizeMetricsDataflowTransform.Key key = InsertSizeMetricsDataflowTransform.Key.of(read1, false, false, false);
 
         DataflowHistogram<Integer> h1= new DataflowHistogram<>();
         h1.addInput(10);
