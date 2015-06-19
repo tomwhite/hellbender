@@ -64,7 +64,7 @@ public final class DataflowUtilsUnitTest extends BaseTest {
     }
 
 
-    @Test
+    @Test(groups = "broken-spark")//FIXME: waiting on https://github.com/cloudera/spark-dataflow/issues/49
     public void testGetReadsFromHadoopBam() {
         List<SimpleInterval> intervals = Lists.newArrayList(new SimpleInterval("chr7:1-202"), new SimpleInterval("chr8:2-202"));
         File inputFile = new File(getToolTestDataDir(), "example_reads.bam");
