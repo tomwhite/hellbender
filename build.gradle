@@ -71,6 +71,10 @@ installApp.dependsOn downloadGsaLibFile
 build.dependsOn installApp
 check.dependsOn installApp
 
+configurations {
+    compile.exclude module: 'guava-jdk5' // exclude an old version of guava which is being pulled in by a transitive dependency of google client jars
+}
+
 dependencies {
     compile files("${System.properties['java.home']}/../lib/tools.jar")
 
@@ -103,8 +107,10 @@ dependencies {
     compile 'org.testng:testng:6.9.4' //compile instead of testCompile because it is needed for test infrastructure that needs to be packaged
     compile 'com.cloudera.dataflow.spark:spark-dataflow:0.2.1'
     compile('org.seqdoop:hadoop-bam:7.1.0') {
+        exclude group: 'org.apache.hadoop'
         exclude module: 'htsjdk'
     }
+    compile('org.apache.hadoop:hadoop-client:2.2.0')
 
     //needed for DataflowAssert
     testCompile 'org.hamcrest:hamcrest-all:1.3'
@@ -222,6 +228,11 @@ shadowJar {
     mergeServiceFiles()
     relocate 'com.google.common', 'org.broadinstitute.hellbender.relocated.com.google.common'
     zip64 true
+    dependencies {
+        // exclude Hadoop dependencies, since they are provided when running with Spark
+        exclude(dependency('org.apache.hadoop:.*:.*'))
+        exclude(dependency('org.xerial.snappy:snappy-java:.*'))
+    }
 }
 
 task javadocJar(type: Jar, dependsOn: javadoc) {
