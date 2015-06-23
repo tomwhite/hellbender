@@ -71,6 +71,10 @@ installApp.dependsOn downloadGsaLibFile
 build.dependsOn installApp
 check.dependsOn installApp
 
+configurations {
+    compile.exclude module: 'guava-jdk5' // exclude an old version of guava which is being pulled in by a transitive dependency of google client jars
+}
+
 dependencies {
     compile files("${System.properties['java.home']}/../lib/tools.jar")
 
@@ -213,6 +217,11 @@ shadowJar {
     mergeServiceFiles()
     relocate 'com.google.common', 'org.broadinstitute.hellbender.relocated.com.google.common'
     zip64 true
+    dependencies {
+        // exclude Hadoop dependencies, since they are provided when running with Spark
+        exclude(dependency('org.apache.hadoop:.*:.*'))
+        exclude(dependency('org.xerial.snappy:snappy-java:.*'))
+    }
 }
 
 task javadocJar(type: Jar, dependsOn: javadoc) {
