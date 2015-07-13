@@ -128,8 +128,8 @@ hadoop fs -cat out/countreads*
 ### Adjusting the Number of Executors and Memory Settings
 
 For pipelines running on large datasets (such as typical BAM files), you will need to adjust the number of Spark
-executors and the amount of memory that each executor uses. For example, the following runs a pipeline on 24 executors
-each with two cores and 4GB of memory:
+executors and the amount of memory that each executor uses. For example, the following runs a pipeline on 100 executors
+each with one core and 3GB of memory:
 
 ```bash
 NAMENODE=<hostname of the HDFS namenode>
@@ -137,8 +137,8 @@ SPARK_MASTER=yarn-client
 spark-submit \
   --master $SPARK_MASTER \
   --driver-memory 3G \
-  --num-executors 24 \
-  --executor-cores 2 \
+  --num-executors 100 \
+  --executor-cores 1 \
   --executor-memory 3G \
   --conf spark.driver.userClassPathFirst=true \
   --conf spark.executor.userClassPathFirst=true \
@@ -150,6 +150,10 @@ spark-submit \
     --runner SPARK \
     --sparkMaster $SPARK_MASTER
 ```
+
+The input file, _NA12877_S1.bam_, is 121GB in size, which gets split into ~950 pieces of input (by the Hadoop input
+format), so roughly ten rounds of 100 concurrent tasks are needed to process the file. On a larger cluster it would be
+advisable to increase the number of executors (or executor cores, or both) so that the pipeline completed faster.
 
 You can find more information about tuning Spark and choosing good values for number of executors and memory settings
 at the following:
