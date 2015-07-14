@@ -253,6 +253,33 @@ public final class BaseRecalibratorDataflowUtils implements Serializable {
                     first = false;
                   }
                   logger.info(String.format("Done downloading reference files (%s ms)\n", timer.elapsed(TimeUnit.MILLISECONDS)));
+                } else if (BucketUtils.isHadoopUrl(referenceFileName)) {
+                    // the reference is on HDFS, download all 3 files locally first.
+                    boolean first = true;
+                    for (String fname : getRelatedFiles(referenceFileName)) {
+                        String localName = "reference";
+                        int slash = fname.lastIndexOf('/');
+                        if (slash >= 0) {
+                            localName = fname.substring(slash + 1);
+                        }
+                        // download reference if necessary
+                        if (new File(localName).exists()) {
+                            if (first) localReference = localName;
+                        } else {
+                            try (
+                                    InputStream in = BucketUtils.openFile(fname, null);
+                                    FileOutputStream fout = new FileOutputStream(localName)) {
+                                final byte[] buf = new byte[1024 * 1024];
+                                int count;
+                                while ((count = in.read(buf)) > 0) {
+                                    fout.write(buf, 0, count);
+                                }
+                            }
+                            if (first) localReference = localName;
+                        }
+                        first = false;
+                    }
+                    logger.info(String.format("Done downloading reference files (%s ms)\n", timer.elapsed(TimeUnit.MILLISECONDS)));
                 }
 
                 ct = new CalibrationTablesBuilder(header, localReference, toolArgs);
