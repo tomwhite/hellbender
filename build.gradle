@@ -71,10 +71,6 @@ installApp.dependsOn downloadGsaLibFile
 build.dependsOn installApp
 check.dependsOn installApp
 
-configurations {
-    compile.exclude module: 'guava-jdk5' // exclude an old version of guava which is being pulled in by a transitive dependency of google client jars
-}
-
 dependencies {
     compile files("${System.properties['java.home']}/../lib/tools.jar")
 
