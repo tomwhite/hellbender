@@ -297,6 +297,8 @@ dependencies {
         exclude module: 'htsjdk'
     }
     compile('org.apache.hadoop:hadoop-client:' + hadoopVersion) // should be a 'provided' dependency
+    compile('org.apache.hadoop:hadoop-aws:' + hadoopVersion)
+    compile('com.upplication:s3fs:2.0.0')
     compile('com.github.jsr203hadoop:jsr203hadoop:1.0.3')
 
     compile('de.javakaffee:kryo-serializers:0.41') {
