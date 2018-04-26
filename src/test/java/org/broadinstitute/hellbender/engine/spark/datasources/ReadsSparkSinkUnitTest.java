@@ -187,7 +187,7 @@ public class ReadsSparkSinkUnitTest extends GATKBaseTest {
         SAMFileHeader header = readSource.getHeader(inputBam, referenceFile);
 
         ReadsSparkSink.writeReads(ctx, outputFile.getAbsolutePath(), referenceFile, rddParallelReads, header, ReadsWriteFormat.SHARDED);
-        int shards = outputFile.listFiles((dir, name) -> !name.startsWith(".") && !name.startsWith("_")).length;
+        int shards = outputFile.listFiles((dir, name) -> !name.startsWith(".") && !name.startsWith("_") && !name.endsWith(SplittingBAMIndexer.OUTPUT_FILE_EXTENSION)).length;
         Assert.assertEquals(shards, 2);
         // check that no local .crc files are created
         int crcs = outputFile.listFiles((dir, name) -> name.startsWith(".") && name.endsWith(".crc")).length;
