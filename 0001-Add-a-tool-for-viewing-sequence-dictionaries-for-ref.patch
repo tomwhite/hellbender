@@ -1,0 +1,59 @@
+From 82f7e22975174f602453901f0e9a30c47fa27932 Mon Sep 17 00:00:00 2001
+From: Tom White <tom@cloudera.com>
+Date: Fri, 25 Aug 2017 08:14:47 +0100
+Subject: [PATCH] Add a tool for viewing sequence dictionaries for ref and
+ reads
+
+---
+ .../tools/spark/ViewSequenceDictionary.java        | 39 ++++++++++++++++++++++
+ 1 file changed, 39 insertions(+)
+ create mode 100644 src/main/java/org/broadinstitute/hellbender/tools/spark/ViewSequenceDictionary.java
+
+diff --git a/src/main/java/org/broadinstitute/hellbender/tools/spark/ViewSequenceDictionary.java b/src/main/java/org/broadinstitute/hellbender/tools/spark/ViewSequenceDictionary.java
+new file mode 100644
+index 000000000..32b53342d
+--- /dev/null
++++ b/src/main/java/org/broadinstitute/hellbender/tools/spark/ViewSequenceDictionary.java
+@@ -0,0 +1,39 @@
++package org.broadinstitute.hellbender.tools.spark;
++
++import htsjdk.samtools.SAMSequenceDictionary;
++import org.apache.spark.api.java.JavaSparkContext;
++import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
++import org.broadinstitute.hellbender.cmdline.programgroups.SparkProgramGroup;
++import org.broadinstitute.hellbender.engine.spark.GATKSparkTool;
++import org.broadinstitute.barclay.help.DocumentedFeature;
++
++@CommandLineProgramProperties(summary="Find count of each contig in a BAM file using Spark",
++                oneLineSummary="Find count of each contig in a BAM file using Spark",
++                programGroup = SparkProgramGroup.class)
++@DocumentedFeature
++public class ViewSequenceDictionary extends GATKSparkTool {
++    private static final long serialVersionUID = 1L;
++
++    @Override
++    public boolean requiresReads() {
++        return true;
++    }
++
++    @Override
++    public boolean requiresReference() {
++        return true;
++    }
++
++    @Override
++    protected void runTool(JavaSparkContext ctx) {
++        System.out.println("Ref");
++        SAMSequenceDictionary referenceSequenceDictionary = getReferenceSequenceDictionary();
++        referenceSequenceDictionary.getSequences().forEach(System.out::println);
++
++        System.out.println("Reads");
++        SAMSequenceDictionary readsSequenceDictionary = getHeaderForReads().getSequenceDictionary();
++        readsSequenceDictionary.getSequences().forEach(System.out::println);
++
++        referenceSequenceDictionary.assertSameDictionary(readsSequenceDictionary);
++    }
++}
+-- 
+2.14.3 (Apple Git-98)
+

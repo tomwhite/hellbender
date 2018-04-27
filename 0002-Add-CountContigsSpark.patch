@@ -1,0 +1,59 @@
+From b59d674ee7f2a0e1325480b5c12ebb5f41165cfd Mon Sep 17 00:00:00 2001
+From: Tom White <tom@cloudera.com>
+Date: Fri, 21 Apr 2017 12:47:05 +0100
+Subject: [PATCH 2/2] Add CountContigsSpark
+
+---
+ .../hellbender/tools/spark/CountContigsSpark.java  | 40 ++++++++++++++++++++++
+ 1 file changed, 40 insertions(+)
+ create mode 100644 src/main/java/org/broadinstitute/hellbender/tools/spark/CountContigsSpark.java
+
+diff --git a/src/main/java/org/broadinstitute/hellbender/tools/spark/CountContigsSpark.java b/src/main/java/org/broadinstitute/hellbender/tools/spark/CountContigsSpark.java
+new file mode 100644
+index 000000000..aee703685
+--- /dev/null
++++ b/src/main/java/org/broadinstitute/hellbender/tools/spark/CountContigsSpark.java
+@@ -0,0 +1,40 @@
++package org.broadinstitute.hellbender.tools.spark;
++
++import htsjdk.samtools.util.Locatable;
++import org.apache.spark.api.java.JavaSparkContext;
++import org.broadinstitute.barclay.argparser.Argument;
++import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
++import org.broadinstitute.barclay.help.DocumentedFeature;
++import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
++import org.broadinstitute.hellbender.cmdline.programgroups.SparkProgramGroup;
++import org.broadinstitute.hellbender.engine.spark.GATKSparkTool;
++import org.broadinstitute.hellbender.utils.gcs.BucketUtils;
++
++import java.io.PrintStream;
++import java.util.TreeMap;
++
++@CommandLineProgramProperties(summary="Find count of each contig in a BAM file using Spark",
++        oneLineSummary="Find count of each contig in a BAM file using Spark",
++        programGroup = SparkProgramGroup.class)
++@DocumentedFeature
++public final class CountContigsSpark extends GATKSparkTool {
++    private static final long serialVersionUID = 0l;
++
++
++    @Argument(doc = "uri for the output file: a local file path",
++            shortName = StandardArgumentDefinitions.OUTPUT_SHORT_NAME, fullName = StandardArgumentDefinitions.OUTPUT_LONG_NAME
++    )
++    public String out;
++
++    @Override
++    public boolean requiresReads() { return true; }
++
++    @Override
++    protected void runTool(JavaSparkContext ctx) {
++        try (final PrintStream ps = new PrintStream(BucketUtils.createFile(out, getAuthenticatedGCSOptions()))) {
++            new TreeMap<>(getReads().map(read -> read.getContig() == null ? "<null>" : read.getContig())
++                    .countByValue())
++                    .forEach((contig, count) -> ps.println(contig + "," + count));
++        }
++    }
++}
+-- 
+2.14.3 (Apple Git-98)
+

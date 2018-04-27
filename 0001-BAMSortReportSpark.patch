@@ -1,0 +1,107 @@
+From 54198dd3d72a0e4929b6b38127b36625c7175009 Mon Sep 17 00:00:00 2001
+From: Tom White <tom@cloudera.com>
+Date: Thu, 20 Apr 2017 12:23:15 +0100
+Subject: [PATCH 1/2] BAMSortReportSpark
+
+---
+ .../hellbender/tools/spark/BAMSortReportSpark.java | 88 ++++++++++++++++++++++
+ 1 file changed, 88 insertions(+)
+ create mode 100644 src/main/java/org/broadinstitute/hellbender/tools/spark/BAMSortReportSpark.java
+
+diff --git a/src/main/java/org/broadinstitute/hellbender/tools/spark/BAMSortReportSpark.java b/src/main/java/org/broadinstitute/hellbender/tools/spark/BAMSortReportSpark.java
+new file mode 100644
+index 000000000..5ad60429d
+--- /dev/null
++++ b/src/main/java/org/broadinstitute/hellbender/tools/spark/BAMSortReportSpark.java
+@@ -0,0 +1,88 @@
++package org.broadinstitute.hellbender.tools.spark;
++
++import com.google.common.collect.Iterators;
++import htsjdk.samtools.SAMFileHeader;
++import org.apache.hadoop.fs.FileStatus;
++import org.apache.hadoop.fs.FileSystem;
++import org.apache.hadoop.fs.Path;
++import org.apache.hadoop.fs.PathFilter;
++import org.apache.spark.api.java.JavaPairRDD;
++import org.apache.spark.api.java.JavaSparkContext;
++import org.broadinstitute.barclay.argparser.Argument;
++import org.broadinstitute.barclay.argparser.CommandLineProgramProperties;
++import org.broadinstitute.barclay.help.DocumentedFeature;
++import org.broadinstitute.hellbender.cmdline.StandardArgumentDefinitions;
++import org.broadinstitute.hellbender.cmdline.programgroups.SparkProgramGroup;
++import org.broadinstitute.hellbender.engine.spark.GATKSparkTool;
++import org.broadinstitute.hellbender.exceptions.GATKException;
++import org.broadinstitute.hellbender.exceptions.UserException;
++import org.broadinstitute.hellbender.utils.gcs.BucketUtils;
++import org.broadinstitute.hellbender.utils.read.GATKRead;
++import org.seqdoop.hadoop_bam.util.SAMHeaderReader;
++import scala.Tuple2;
++
++import java.io.IOException;
++import java.io.PrintStream;
++import java.util.TreeMap;
++
++@CommandLineProgramProperties(summary="Report BAM file sort order (including for sharded files) using Spark",
++        oneLineSummary="Report BAM file sort order on Spark",
++        programGroup = SparkProgramGroup.class)
++@DocumentedFeature
++public final class BAMSortReportSpark extends GATKSparkTool {
++    private static final long serialVersionUID = 0l;
++
++
++    @Argument(doc = "uri for the output file: a local file path",
++            shortName = StandardArgumentDefinitions.OUTPUT_SHORT_NAME, fullName = StandardArgumentDefinitions.OUTPUT_LONG_NAME,
++            optional = false)
++    public String out;
++
++    @Override
++    public boolean requiresReads() { return true; }
++
++    @Override
++    protected void runTool(JavaSparkContext ctx) {
++        try (final PrintStream ps = new PrintStream(BucketUtils.createFile(out, getAuthenticatedGCSOptions()))) {
++            report(ctx, ps);
++            ps.println();
++            ps.println("Partition boundaries");
++            JavaPairRDD<Integer, GATKRead> firstReads = getReads()
++                    .mapPartitionsWithIndex((v1, v2) -> Iterators.singletonIterator(new Tuple2<>(v1, Iterators.getNext(v2, null))), true)
++                    .mapToPair(t -> t);
++            new TreeMap<>(firstReads.collectAsMap())
++                    .forEach((partition, gatkRead) -> ps.println(partition + ": " + gatkRead.getSAMString()));
++        } catch (IOException e) {
++            throw new GATKException("Report failed", e);
++        }
++    }
++
++    private void report(JavaSparkContext ctx, PrintStream ps) throws IOException {
++
++        Path path = new Path(getReadSourceName());
++        FileSystem fs = path.getFileSystem(ctx.hadoopConfiguration());
++        if (fs.isDirectory(path)) {
++            FileStatus[] bamFiles = fs.listStatus(path, new PathFilter() {
++                private static final long serialVersionUID = 1L;
++                @Override
++                public boolean accept(Path path) {
++                    return path.getName().startsWith("part-");
++                }
++            });
++            if (bamFiles.length == 0) {
++                throw new UserException("No BAM files found in: " + path);
++            }
++            ps.println("Number of BAM files: " + bamFiles.length);
++            SAMFileHeader.SortOrder sortOrder = null;
++            for (FileStatus stat : bamFiles) {
++                SAMFileHeader header = SAMHeaderReader.readSAMHeaderFrom(stat.getPath(), ctx.hadoopConfiguration());
++                if (sortOrder == null) {
++                    sortOrder = header.getSortOrder();
++                    ps.println("Sort order: " + sortOrder);
++                } else if (sortOrder != header.getSortOrder()) {
++                    ps.println("Exception: " + stat.getPath() + ": " + sortOrder);
++                }
++            }
++        }
++    }
++}
+-- 
+2.14.3 (Apple Git-98)
+
