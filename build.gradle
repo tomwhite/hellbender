@@ -208,6 +208,9 @@ configurations {
         exclude module: 'spark-mllib_2.11'
         exclude group: 'org.scala-lang'
         exclude module: 'kryo'
+        exclude group: 'javax.jms'
+        exclude group: 'com.sun.jdmk'
+        exclude group: 'com.sun.jmx'
     }
 }
 
